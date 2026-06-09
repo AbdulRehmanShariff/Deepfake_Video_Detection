@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deepfake Video Detector Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+      ::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+
+      .fade-up {
+        animation: fUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      @keyframes fUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .glow-pulse-red {
+        animation: gPR 2s infinite;
+      }
+      @keyframes gPR {
+        0%,
+        100% {
+          box-shadow: 0 0 5px rgba(239, 68, 68, 0.2);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+      }
+
+      .glow-pulse-yellow {
+        animation: gPY 2s infinite;
+      }
+      @keyframes gPY {
+        0%,
+        100% {
+          box-shadow: 0 0 5px rgba(234, 179, 8, 0.2);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+        }
+      }
+
+      .gauge-anim {
+        transition: stroke-dasharray 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .tooltip-box {
+        position: relative;
+      }
+      .tooltip-content {
+        visibility: hidden;
+        width: 140px;
+        background: #020617;
+        border: 1px solid #334155;
+        color: #fff;
+        text-align: center;
+        border-radius: 8px;
+        padding: 6px;
+        position: absolute;
+        z-index: 50;
+        bottom: 115%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+        pointer-events: none;
+      }
+      .tooltip-box:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body class="bg-[#030712] text-slate-100 font-sans min-h-screen antialiased">
+    <header
+      class="border-b border-slate-800 bg-[#030712]/80 backdrop-blur-md sticky top-0 z-50"
+    >
+      <div
+        class="max-w-[1500px] mx-auto px-6 py-4 flex items-center justify-between"
+      >
+        <div class="flex items-center space-x-3">
+          <div class="h-8 w-1 bg-blue-500 rounded-full"></div>
+          <div>
+            <h1
+              class="text-xl font-black uppercase tracking-wider text-slate-50"
+            >
+              Deepfake Video Detector
+            </h1>
+            <p
+              class="text-slate-500 text-[10px] tracking-widest uppercase font-semibold"
+            >
+              Neural Forensic Classification Platform
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="flex items-center space-x-2 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-md"
+        >
+          <span
+            class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse glow-pulse-yellow"
+          ></span>
+          <span
+            class="text-[11px] font-mono tracking-wider text-emerald-400 font-bold uppercase"
+            >Neural Engine: Live</span
+          >
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-[1500px] mx-auto px-6 py-8 space-y-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div
+          class="bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex flex-col justify-between"
+        >
+          <div>
+            <span
+              class="text-[10px] font-bold text-blue-400 tracking-widest uppercase"
+              >Phase 01</span
+            >
+            <div class="flex justify-between items-center mt-0.5 mb-4">
+              <h2 class="text-base font-bold text-slate-200">
+                Target Array Selection
+              </h2>
+              <button
+                id="resetBtn"
+                class="hidden text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded border border-slate-700 uppercase tracking-widest transition-colors"
+              >
+                Clear Input
+              </button>
+            </div>
+
+            <div
+              id="dropZone"
+              class="border border-dashed border-slate-700 hover:border-blue-500 rounded-lg p-8 text-center transition-all bg-slate-950/40 relative group"
+            >
+              <input
+                type="file"
+                id="videoInput"
+                accept="video/*"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+              />
+              <svg
+                class="mx-auto h-10 w-10 text-slate-600 group-hover:text-blue-500 transition-colors mb-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.2"
+                  d="M15 10l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z"
+                />
+              </svg>
+              <p id="fileName" class="text-sm font-semibold text-slate-300">
+                Ingest Local Video File
+              </p>
+              <p class="text-xs text-slate-500 mt-1">MP4, AVI, MOV supported</p>
+            </div>
+          </div>
+
+          <button
+            id="analyzeBtn"
+            class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-lg text-xs tracking-widest uppercase transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+            disabled
+          >
+            Launch Analytical Pass
+          </button>
+        </div>
+
+        <div
+          class="bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex flex-col"
+        >
+          <span
+            class="text-[10px] font-bold text-blue-400 tracking-widest uppercase"
+            >Phase 02</span
+          >
+          <h2 class="text-base font-bold text-slate-200 mt-0.5 mb-4">
+            Source Synchronizer View
+          </h2>
+          <div
+            class="flex-grow bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-center relative overflow-hidden min-h-[160px]"
+          >
+            <span
+              id="placeholderText"
+              class="text-xs font-mono text-slate-600 uppercase tracking-widest"
+              >Feed Disconnected</span
+            >
+            <video
+              id="videoPreview"
+              class="absolute inset-0 w-full h-full object-contain hidden"
+              controls
+            ></video>
+          </div>
+        </div>
+
+        <div
+          class="bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col"
+        >
+          <span
+            class="text-[10px] font-bold text-emerald-400 tracking-widest uppercase"
+            >Pipeline</span
+          >
+          <h2 class="text-base font-bold text-slate-200 mt-0.5 mb-4">
+            Internal System Diagnostics
+          </h2>
+          <div
+            id="terminal"
+            class="flex-grow font-mono text-[11px] text-emerald-500/90 overflow-y-auto space-y-1.5 h-40 scroll-smooth"
+          >
+            <p class="text-slate-600">
+              > Awaiting target pipeline activation...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div id="resultsDashboard" class="hidden space-y-8 fade-up">
+        <div
+          class="flex items-center justify-between border-b border-slate-800 pb-4"
+        >
+          <div class="flex items-center space-x-4">
+            <h3 class="text-lg font-bold text-slate-100">
+              AI Analytics Matrix
+            </h3>
+            <span
+              id="verdictBadge"
+              class="px-5 py-1.5 rounded-md font-black text-xs tracking-widest uppercase border"
+            ></span>
+          </div>
+          <button
+            id="downloadPdfBtn"
+            class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-widest transition-colors shadow-lg"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 13l-7 7-7-7"
+              />
+            </svg>
+            <span>Export Forensic Report Document</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            class="bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex flex-col justify-center space-y-6"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h4
+                  class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"
+                >
+                  Classification Confidence
+                </h4>
+                <p
+                  id="authScoreText"
+                  class="text-2xl font-black text-white mt-0.5"
+                >
+                  -
+                </p>
+              </div>
+              <svg class="w-16 h-16 transform -rotate-90">
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="28"
+                  stroke="#1e293b"
+                  stroke-width="5"
+                  fill="none"
+                />
+                <circle
+                  id="authGauge"
+                  class="gauge-anim"
+                  cx="32"
+                  cy="32"
+                  r="28"
+                  stroke="#3b82f6"
+                  stroke-width="5"
+                  fill="none"
+                  stroke-dasharray="0, 175.9"
+                />
+              </svg>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <h4
+                  class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"
+                >
+                  Peak Anomaly Spike
+                </h4>
+                <p
+                  id="spikeScoreText"
+                  class="text-2xl font-black text-red-400 mt-0.5"
+                >
+                  -
+                </p>
+              </div>
+              <svg class="w-16 h-16 transform -rotate-90">
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="28"
+                  stroke="#1e293b"
+                  stroke-width="5"
+                  fill="none"
+                />
+                <circle
+                  id="spikeGauge"
+                  class="gauge-anim"
+                  cx="32"
+                  cy="32"
+                  r="28"
+                  stroke="#ef4444"
+                  stroke-width="5"
+                  fill="none"
+                  stroke-dasharray="0, 175.9"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div
+            class="bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex gap-4"
+          >
+            <div class="flex-1 flex flex-col justify-center space-y-3">
+              <h4
+                class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2"
+              >
+                Feature Weight Vectors
+              </h4>
+              <div>
+                <div
+                  class="flex justify-between text-[9px] font-bold uppercase mb-1"
+                >
+                  <span class="text-slate-300">Edge Blending</span>
+                  <span id="xaiEdge" class="text-white">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1">
+                  <div
+                    id="xaiEdgeBar"
+                    class="bg-blue-500 h-1 rounded-full"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div
+                  class="flex justify-between text-[9px] font-bold uppercase mb-1"
+                >
+                  <span class="text-slate-300">Spatial Noise</span>
+                  <span id="xaiNoise" class="text-white">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1">
+                  <div
+                    id="xaiNoiseBar"
+                    class="bg-emerald-500 h-1 rounded-full"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div
+                  class="flex justify-between text-[9px] font-bold uppercase mb-1"
+                >
+                  <span class="text-slate-300">Temp. Flickering</span>
+                  <span id="xaiFlicker" class="text-white">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1">
+                  <div
+                    id="xaiFlickerBar"
+                    class="bg-purple-500 h-1 rounded-full"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="w-32 h-32 flex-shrink-0 relative">
+              <canvas id="radarChart"></canvas>
+            </div>
+          </div>
+
+          <div
+            class="bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-3"
+          >
+            <h4
+              class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"
+            >
+              Inference File Properties
+            </h4>
+            <div class="space-y-2.5 text-xs font-mono">
+              <div
+                class="flex justify-between border-b border-slate-800/80 pb-1.5"
+              >
+                <span class="text-slate-500">File Ingested:</span>
+                <span
+                  id="metaName"
+                  class="text-cyan-400 font-bold truncate max-w-[150px]"
+                  >-</span
+                >
+              </div>
+              <div
+                class="flex justify-between border-b border-slate-800/80 pb-1.5"
+              >
+                <span class="text-slate-500">Properties:</span>
+                <span id="metaProps" class="text-slate-200">-</span>
+              </div>
+              <div
+                class="flex justify-between border-b border-slate-800/80 pb-1.5"
+              >
+                <span class="text-slate-500">Regions Extracted:</span>
+                <span id="diagFaces" class="text-slate-200">-</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">Total Latency:</span>
+                <span id="diagTotal" class="text-slate-200">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div
+            class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center"
+          >
+            <h5
+              class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+            >
+              Local ROC-AUC Variance
+            </h5>
+            <p id="statAuc" class="text-3xl font-black text-blue-400 mt-2">-</p>
+            <p class="text-[9px] text-slate-500 mt-1">
+              Discriminative boundary precision.
+            </p>
+          </div>
+          <div
+            class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center"
+          >
+            <h5
+              class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+            >
+              Model Log-Loss Index
+            </h5>
+            <p id="statLoss" class="text-3xl font-black text-purple-400 mt-2">
+              -
+            </p>
+            <p class="text-[9px] text-slate-500 mt-1">
+              Cross-entropy convergence evaluation.
+            </p>
+          </div>
+          <div
+            class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center"
+          >
+            <h5
+              class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+            >
+              SSIM Vector Deviation
+            </h5>
+            <p id="statSsim" class="text-3xl font-black text-emerald-400 mt-2">
+              -
+            </p>
+            <p class="text-[9px] text-slate-500 mt-1">
+              Structural similarity variance check.
+            </p>
+          </div>
+          <div
+            class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center"
+          >
+            <h5
+              class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+            >
+              Benford's Law Delta
+            </h5>
+            <p id="statBenford" class="text-3xl font-black text-amber-400 mt-2">
+              -
+            </p>
+            <p class="text-[9px] text-slate-500 mt-1">
+              Compression artifact matrix variation.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-5">
+            <h4
+              class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4"
+            >
+              Temporal Consistency Trace Curve
+            </h4>
+            <div class="relative h-60 w-full">
+              <canvas id="temporalChart"></canvas>
+            </div>
+          </div>
+          <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-5">
+            <h4
+              class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4"
+            >
+              Model Processing Behavior Curve
+            </h4>
+            <div class="relative h-60 w-full">
+              <canvas id="behaviorChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-5">
+          <div class="mb-4">
+            <h4
+              class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"
+            >
+              Sequential Biometric Matrix Strip
+            </h4>
+          </div>
+          <div
+            id="suspectStrip"
+            class="flex overflow-x-auto space-x-3.5 pb-2 pt-1 px-1"
+          ></div>
+        </div>
+
+        <div
+          class="bg-slate-950 border border-slate-800 rounded-xl p-6 space-y-4"
+        >
+          <h4 class="text-xs font-bold text-blue-400 uppercase tracking-widest">
+            Forensic Interpretability Analysis Explanation
+          </h4>
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed text-slate-400"
+          >
+            <div>
+              <p class="mb-3">
+                <strong class="text-slate-200"
+                  >1. Edge Blending & Spatial Artifact Noise:</strong
+                >
+                Deepfake synthesis engines leave microscopic blending anomalies
+                around the boundaries of the face (eyes, jawline, mouth). The
+                model uses EfficientNetV2 to parse spatial structures.
+              </p>
+              <p>
+                <strong class="text-slate-200"
+                  >2. Local ROC-AUC & Log-Loss Integrity:</strong
+                >
+                High Area Under the Curve (AUC) variance coupled with low model
+                loss indexes implies absolute categorization confidence.
+              </p>
+            </div>
+            <div>
+              <p class="mb-3">
+                <strong class="text-slate-200"
+                  >3. SSIM Vector Deviation Metrics:</strong
+                >
+                Structural Similarity Index Measure (SSIM) maps the continuity
+                from frame index $n$ to frame index $n+1$. Deepfake algorithms
+                generate sudden pixel jitter variations.
+              </p>
+              <p>
+                <strong class="text-slate-200"
+                  >4. Benford's Law Processing Math:</strong
+                >
+                Natural video files follow an exact discrete cosine transform
+                coefficient distribution. Synthetic generation algorithms
+                disrupt this pixel rule baseline.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const videoInput = document.getElementById("videoInput");
+      const fileName = document.getElementById("fileName");
+      const analyzeBtn = document.getElementById("analyzeBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const terminal = document.getElementById("terminal");
+      const resultsDashboard = document.getElementById("resultsDashboard");
+      const videoPreview = document.getElementById("videoPreview");
+      const placeholderText = document.getElementById("placeholderText");
+      const suspectStrip = document.getElementById("suspectStrip");
+      const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+
+      let temporalChartInst = null;
+      let behaviorChartInst = null;
+      let radarChartInst = null;
+      let globalReportData = null;
+
+      // CRITICAL BUG FIX: Custom Background Plugin for Chart.js so PDFs aren't transparent
+      const customBgPlugin = {
+        id: "customBgPlugin",
+        beforeDraw: (chart) => {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.globalCompositeOperation = "destination-over";
+          ctx.fillStyle = "#0f172a"; // Matches tailwind bg-slate-900
+          ctx.fillRect(0, 0, chart.width, chart.height);
+          ctx.restore();
+        },
+      };
+
+      resetBtn.addEventListener("click", () => {
+        videoInput.value = "";
+        fileName.textContent = "Ingest Local Video File";
+        analyzeBtn.disabled = true;
+        resetBtn.classList.add("hidden");
+
+        videoPreview.src = "";
+        videoPreview.classList.add("hidden");
+        placeholderText.classList.remove("hidden");
+
+        resultsDashboard.classList.add("hidden");
+        terminal.innerHTML =
+          '<p class="text-slate-600">> System metrics purged. Awaiting new input array sequence...</p>';
+        globalReportData = null;
+      });
+
+      videoInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          fileName.textContent = file.name;
+          analyzeBtn.disabled = false;
+          resetBtn.classList.remove("hidden");
+
+          videoPreview.src = URL.createObjectURL(file);
+          videoPreview.classList.remove("hidden");
+          placeholderText.classList.add("hidden");
+          resultsDashboard.classList.add("hidden");
+          terminal.innerHTML =
+            '<p class="text-slate-600">> Input synchronizer locked on target file assets. Click launch execution...</p>';
+        }
+      });
+
+      const corePipelineLogs = [
+        "[System Core] Ingesting secure video binary allocation array...",
+        "[OpenCV Integration] Extracting high-res document thumbnail vector maps...",
+        "[Haar Cascade] Isolating biometric region coordinate parameters...",
+        "[EfficientNetV2] Forwarding spatial matrices across hidden neural layers...",
+        "[Statistical Core] Evaluating Benford Delta and SSIM vector calculations...",
+      ];
+
+      function simulateLogs() {
+        terminal.innerHTML = "";
+        corePipelineLogs.forEach((log, index) => {
+          setTimeout(() => {
+            terminal.innerHTML += `<p class="text-slate-400">> ${log}</p>`;
+            terminal.scrollTop = terminal.scrollHeight;
+          }, index * 400);
+        });
+      }
+
+      analyzeBtn.addEventListener("click", async () => {
+        const file = videoInput.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        analyzeBtn.disabled = true;
+        resetBtn.classList.add("opacity-50", "pointer-events-none");
+        resultsDashboard.classList.add("hidden");
+        simulateLogs();
+
+        try {
+          const response = await fetch("http://127.0.0.1:5000/predict", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            globalReportData = data;
+            setTimeout(() => {
+              terminal.innerHTML += `<p class="text-emerald-400 font-bold">> [SUCCESS] Processing complete. Telemetry maps generated inside workspace.</p>`;
+              terminal.scrollTop = terminal.scrollHeight;
+              displayMetrics(data);
+              resetBtn.classList.remove("opacity-50", "pointer-events-none");
+            }, corePipelineLogs.length * 400);
+          } else {
+            terminal.innerHTML += `<p class="text-red-500">> [ENGINE ERROR] ${data.message}</p>`;
+            resetBtn.classList.remove("opacity-50", "pointer-events-none");
+          }
+        } catch (error) {
+          terminal.innerHTML += `<p class="text-red-500">> [CONNECTION TIMEOUT] Network failed to sync metrics backend.</p>`;
+          resetBtn.classList.remove("opacity-50", "pointer-events-none");
+        } finally {
+          analyzeBtn.disabled = false;
+        }
+      });
+
+      function displayMetrics(data) {
+        resultsDashboard.classList.remove("hidden");
+
+        const badge = document.getElementById("verdictBadge");
+        if (data.overall_label === "INCONCLUSIVE") {
+          badge.textContent = "INCONCLUSIVE / 50% CHANCE";
+          badge.className =
+            "px-5 py-1.5 rounded-md font-black text-xs tracking-widest uppercase bg-yellow-950/50 text-yellow-500 border border-yellow-500/40 glow-pulse-yellow";
+        } else if (data.overall_label === "DEEPFAKE") {
+          badge.textContent = "DEEPFAKE DETECTED";
+          badge.className =
+            "px-5 py-1.5 rounded-md font-black text-xs tracking-widest uppercase bg-red-950/50 text-red-500 border border-red-500/40 glow-pulse-red";
+        } else {
+          badge.textContent = "VERIFIED GENUINE";
+          badge.className =
+            "px-5 py-1.5 rounded-md font-black text-xs tracking-widest uppercase bg-emerald-950/50 text-emerald-500 border border-emerald-500/40";
+        }
+
+        document.getElementById("metaName").textContent = data.filename;
+        document.getElementById("metaProps").textContent =
+          `${data.meta.total_frames_in_file} F / ${data.meta.fps} FPS`;
+        document.getElementById("diagFaces").textContent =
+          data.diagnostics.frames_processed;
+        document.getElementById("diagTotal").textContent =
+          data.processing_time_ms + " ms";
+
+        document.getElementById("xaiEdge").textContent =
+          data.explainability.edge_blending_anomaly + "%";
+        document.getElementById("xaiEdgeBar").style.width =
+          data.explainability.edge_blending_anomaly + "%";
+        document.getElementById("xaiNoise").textContent =
+          data.explainability.spatial_noise + "%";
+        document.getElementById("xaiNoiseBar").style.width =
+          data.explainability.spatial_noise + "%";
+        document.getElementById("xaiFlicker").textContent =
+          data.explainability.temporal_flicker + "%";
+        document.getElementById("xaiFlickerBar").style.width =
+          data.explainability.temporal_flicker + "%";
+
+        document.getElementById("statAuc").textContent =
+          data.statistical_deep_dive.local_auc_variance;
+        document.getElementById("statLoss").textContent =
+          data.statistical_deep_dive.log_loss_index;
+        document.getElementById("statSsim").textContent =
+          data.statistical_deep_dive.ssim_vector_deviation + "%";
+        document.getElementById("statBenford").textContent =
+          data.statistical_deep_dive.benford_law_delta + "%";
+
+        const totalCircumference = 175.9;
+        document.getElementById("authScoreText").textContent =
+          data.overall_confidence + "%";
+        document.getElementById("authGauge").style.strokeDasharray =
+          `${(data.overall_confidence / 100) * totalCircumference}, 175.9`;
+
+        const peakSpike = data.max_anomaly_spike;
+        document.getElementById("spikeScoreText").textContent = peakSpike + "%";
+        document.getElementById("spikeGauge").style.strokeDasharray =
+          `${(peakSpike / 100) * totalCircumference}, 175.9`;
+
+        suspectStrip.innerHTML = "";
+        data.timeline_data.forEach((frame) => {
+          const borderHighlight =
+            frame.fake_probability > 55
+              ? "border-red-500"
+              : frame.fake_probability >= 45
+                ? "border-yellow-500"
+                : "border-emerald-500";
+          const matrixTextClass =
+            frame.fake_probability > 55
+              ? "text-red-400"
+              : frame.fake_probability >= 45
+                ? "text-yellow-400"
+                : "text-emerald-400";
+
+          suspectStrip.innerHTML += `
+                    <div class="tooltip-box flex-shrink-0 w-20">
+                        <div class="border rounded overflow-hidden transition-transform duration-200 hover:scale-105 ${borderHighlight}">
+                            <img src="data:image/jpeg;base64,${frame.face_base64}" class="w-full h-20 object-cover">
+                        </div>
+                        <p class="text-center text-[9px] font-mono font-bold text-slate-500 mt-1.5">IDX ${frame.frame_number}</p>
+                        <span class="tooltip-content text-[10px] font-mono">
+                            Frame ${frame.frame_number}<br>
+                            <span class="${matrixTextClass} font-bold">${frame.fake_probability}% Fake</span>
+                        </span>
+                    </div>
+                `;
+        });
+
+        // CHART RENDERING (ANIMATION: FALSE CRITICAL FIX FOR PDF EXPORT)
+        const chartLabels = data.timeline_data.map(
+          (d) => `F-${d.frame_number}`,
+        );
+        const primaryTraceScores = data.timeline_data.map(
+          (d) => d.fake_probability,
+        );
+
+        if (temporalChartInst) temporalChartInst.destroy();
+        temporalChartInst = new Chart(
+          document.getElementById("temporalChart").getContext("2d"),
+          {
+            type: "line",
+            data: {
+              labels: chartLabels,
+              datasets: [
+                {
+                  data: primaryTraceScores,
+                  borderColor: "#2563eb",
+                  backgroundColor: "rgba(37, 99, 235, 0.05)",
+                  borderWidth: 2,
+                  tension: 0.35,
+                  fill: true,
+                  pointBackgroundColor: primaryTraceScores.map((v) =>
+                    v > 55 ? "#ef4444" : v >= 45 ? "#eab308" : "#10b981",
+                  ),
+                  pointRadius: 4,
+                },
+              ],
+            },
+            options: {
+              animation: false,
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: { beginAtZero: true, max: 100 },
+                x: { grid: { display: false } },
+              },
+              plugins: { legend: { display: false } },
+            },
+            plugins: [customBgPlugin],
+          },
+        );
+
+        if (behaviorChartInst) behaviorChartInst.destroy();
+        behaviorChartInst = new Chart(
+          document.getElementById("behaviorChart").getContext("2d"),
+          {
+            type: "line",
+            data: {
+              labels: chartLabels,
+              datasets: [
+                {
+                  label: "Decision Curve",
+                  data: data.behavior_metrics.convergence_curve,
+                  borderColor: "#a855f7",
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  tension: 0.2,
+                  fill: false,
+                },
+                {
+                  label: "Feature Variance",
+                  data: data.behavior_metrics.feature_deltas,
+                  borderColor: "#06b6d4",
+                  backgroundColor: "rgba(6, 182, 212, 0.1)",
+                  borderWidth: 2,
+                  tension: 0.4,
+                  fill: true,
+                },
+              ],
+            },
+            options: {
+              animation: false,
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: { x: { grid: { display: false } } },
+              plugins: {
+                legend: {
+                  display: true,
+                  labels: { color: "#94a3b8", font: { size: 10 } },
+                },
+              },
+            },
+            plugins: [customBgPlugin],
+          },
+        );
+
+        // THE NEW XAI RADAR CHART!
+        if (radarChartInst) radarChartInst.destroy();
+        radarChartInst = new Chart(
+          document.getElementById("radarChart").getContext("2d"),
+          {
+            type: "radar",
+            data: {
+              labels: ["Edge", "Noise", "Flicker"],
+              datasets: [
+                {
+                  data: [
+                    data.explainability.edge_blending_anomaly,
+                    data.explainability.spatial_noise,
+                    data.explainability.temporal_flicker,
+                  ],
+                  backgroundColor: "rgba(59, 130, 246, 0.3)",
+                  borderColor: "#3b82f6",
+                  borderWidth: 2,
+                  pointBackgroundColor: "#3b82f6",
+                },
+              ],
+            },
+            options: {
+              animation: false,
+              scales: {
+                r: {
+                  angleLines: { color: "#334155" },
+                  grid: { color: "#334155" },
+                  pointLabels: { color: "#94a3b8", font: { size: 8 } },
+                  ticks: { display: false, max: 100, min: 0 },
+                },
+              },
+              plugins: { legend: { display: false } },
+            },
+            plugins: [customBgPlugin],
+          },
+        );
+      }
+
+      // PERFECTED PDF REPORT GENERATOR (FIXED LAYOUT AND GRAPHS)
+      downloadPdfBtn.addEventListener("click", () => {
+        if (!globalReportData) return;
+
+        const originalText = downloadPdfBtn.innerHTML;
+        downloadPdfBtn.innerHTML = "Compiling Report...";
+
+        const tempChartImage = temporalChartInst.toBase64Image();
+        const behChartImage = behaviorChartInst.toBase64Image();
+        const radarChartImage = radarChartInst.toBase64Image();
+
+        const pdfContainer = document.createElement("div");
+
+        let frameRowsHtml = "";
+        globalReportData.timeline_data.forEach((f) => {
+          let statusColor =
+            f.fake_probability > 55
+              ? "#b91c1c"
+              : f.fake_probability >= 45
+                ? "#b45309"
+                : "#047857";
+          frameRowsHtml += `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: center;">${f.frame_number}</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: center;">${f.actual_frame_index}</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; font-weight: bold; text-align: center; color: ${statusColor};">${f.fake_probability}%</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: center;">${f.inference_speed_ms} ms</td>
+                        <td style="padding: 6px 10px; border: 1px solid #cbd5e1; font-weight: bold; text-align: center; color: ${statusColor};">${f.verdict_status}</td>
+                    </tr>
+                `;
+        });
+
+        pdfContainer.innerHTML = `
+                <div style="padding: 35px; font-family: Arial, sans-serif; color: #0f172a; background: #ffffff; width: 790px; line-height: 1.4;">
+                    
+                    <div style="border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <h1 style="margin: 0; color: #1e3a8a; font-size: 24px; text-transform: uppercase; letter-spacing: 0.5px;">Forensic Classification Report</h1>
+                            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;">Deepfake Video Detector Core Ledger</p>
+                        </div>
+                        <div style="text-align: right; font-size: 11px;">
+                            <p style="margin: 0; font-weight: bold;">Document ID: FNS-${Date.now()}</p>
+                            <p style="margin: 2px 0 0 0; color: #64748b;">Timestamp: ${new Date().toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div style="page-break-inside: avoid;">
+                        <div style="display: flex; gap: 20px; margin-bottom: 25px;">
+                            <div style="flex: 1.2;">
+                                <h3 style="margin-top: 0; color: #1e3a8a; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">Target Media File Properties</h3>
+                                <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px;">
+                                    <tr><td style="padding: 4px 0; color: #64748b;">Filename:</td><td style="padding: 4px 0; font-weight: bold;">${globalReportData.filename}</td></tr>
+                                    <tr><td style="padding: 4px 0; color: #64748b;">File Array Frame Count:</td><td style="padding: 4px 0; font-weight: bold;">${globalReportData.meta.total_frames_in_file} frames</td></tr>
+                                    <tr><td style="padding: 4px 0; color: #64748b;">Media FPS Boundary:</td><td style="padding: 4px 0; font-weight: bold;">${globalReportData.meta.fps} Hz</td></tr>
+                                    <tr><td style="padding: 4px 0; color: #64748b;">Asset Evaluation Duration:</td><td style="padding: 4px 0; font-weight: bold;">${globalReportData.meta.duration_seconds} sec</td></tr>
+                                    <tr><td style="padding: 4px 0; color: #64748b;">Total Engine Latency Time:</td><td style="padding: 4px 0; font-weight: bold;">${globalReportData.processing_time_ms} ms</td></tr>
+                                </table>
+                                
+                                <div style="margin-top: 15px; padding: 15px; border-radius: 6px; background: ${globalReportData.overall_label === "DEEPFAKE" ? "#fee2e2" : globalReportData.overall_label === "REAL" ? "#d1fae5" : "#fef3c7"}; border: 1.5px solid ${globalReportData.overall_label === "DEEPFAKE" ? "#ef4444" : globalReportData.overall_label === "REAL" ? "#10b981" : "#f59e0b"};">
+                                    <h4 style="margin: 0; font-size: 11px; text-transform: uppercase; color: #475569;">Classification Conclusion</h4>
+                                    <h2 style="margin: 6px 0 0 0; font-size: 24px; color: ${globalReportData.overall_label === "DEEPFAKE" ? "#b91c1c" : globalReportData.overall_label === "REAL" ? "#047857" : "#b45309"};">${globalReportData.overall_label}</h2>
+                                    <p style="margin: 4px 0 0 0; font-size: 11px; font-weight: bold; color: #334155;">System Confidence Level: ${globalReportData.overall_confidence}%</p>
+                                </div>
+                            </div>
+                            <div style="flex: 1; text-align: center;">
+                                <h3 style="margin-top: 0; color: #1e3a8a; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; text-align: left;">Primary Frame Capture</h3>
+                                <img src="data:image/jpeg;base64,${globalReportData.video_thumbnail_b64}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; margin-top: 8px;">
+                            </div>
+                        </div>
+
+                        <h3 style="color: #1e3a8a; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 10px;">Forensic Interpretability Weights & Math</h3>
+                        
+                        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                            <table style="flex: 2; border-collapse: collapse; font-size: 10px;">
+                                <tr style="background: #f8fafc;">
+                                    <th style="padding: 6px; text-align: left; border: 1px solid #cbd5e1;">Evaluated Parameter Metrics</th>
+                                    <th style="padding: 6px; text-align: center; border: 1px solid #cbd5e1;">Value</th>
+                                </tr>
+                                <tr><td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>Facial Edge Blending:</strong> Evaluates mask boundary discontinuity.</td><td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${globalReportData.explainability.edge_blending_anomaly}%</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>Spatial Noise Artifacts:</strong> Identifies localized GAN synthesis noise.</td><td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${globalReportData.explainability.spatial_noise}%</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>Temporal Flickering:</strong> Evaluates pixel vector variation loops.</td><td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${globalReportData.explainability.temporal_flicker}%</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>Local ROC-AUC Variance:</strong> Statistical precision tracking index.</td><td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${globalReportData.statistical_deep_dive.local_auc_variance}</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>Model Log-Loss Index:</strong> Cross entropy calculation measure.</td><td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${globalReportData.statistical_deep_dive.log_loss_index}</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>SSIM Vector Deviation:</strong> Structural similarity tracking variances.</td><td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${globalReportData.statistical_deep_dive.ssim_vector_deviation}%</td></tr>
+                            </table>
+                            <div style="flex: 1; text-align: center;">
+                                <p style="font-size: 10px; font-weight: bold; color: #475569; margin-bottom: 4px;">Feature Weight Radar Map</p>
+                                <img src="${radarChartImage}" style="width: 130px; height: 130px; border-radius: 5px; border: 1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="page-break-inside: avoid; margin-bottom: 25px;">
+                        <h3 style="color: #1e3a8a; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 10px;">Sequential Biometric Frame Array Ledger</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                            <thead style="background: #f1f5f9;">
+                                <tr>
+                                    <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">Matrix ID</th>
+                                    <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">File Frame Index</th>
+                                    <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">Deepfake Probability Score</th>
+                                    <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">Inference Velocity</th>
+                                    <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">Frame Verdict Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${frameRowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="page-break-inside: avoid; margin-top: 15px;">
+                        <h3 style="color: #1e3a8a; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 15px;">Analytical Visualizations & Trace Graphs</h3>
+                        <div style="margin-bottom: 20px; text-align: center;">
+                            <p style="font-size: 10px; font-weight: bold; color: #475569; text-align: left; margin-bottom: 4px;">1. Temporal Consistency Trace Curve Graph</p>
+                            <img src="${tempChartImage}" style="width: 100%; max-height: 220px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;">
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 10px; font-weight: bold; color: #475569; text-align: left; margin-bottom: 4px;">2. Model Behavior Mapping (Convergence & Variance Curves)</p>
+                            <img src="${behChartImage}" style="width: 100%; max-height: 220px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;">
+                        </div>
+                    </div>
+
+                </div>
+            `;
+
+        // Adding a 0.4 inch margin prevents edge clipping
+        const opt = {
+          margin: 0.4,
+          filename: `Deepfake_Forensic_Report_${globalReportData.filename}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+        };
+
+        html2pdf()
+          .set(opt)
+          .from(pdfContainer)
+          .save()
+          .then(() => {
+            downloadPdfBtn.innerHTML = originalText;
+          });
+      });
+    </script>
+  </body>
+</html>

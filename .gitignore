@@ -1,0 +1,4 @@
+temp_videos/
+__pycache__/
+.env
+.vscode/
